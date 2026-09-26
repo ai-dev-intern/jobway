@@ -1,0 +1,100 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  directUrl  = env("DIRECT_URL")
+  extensions = [vector]
+}
+
+model StagedQuestion {
+  id              String   @id @default(uuid())
+  rawText         String
+  source          String   @default("Scraper") // e.g. Student, Scraper
+  status          String   @default("PENDING_AI") // PENDING_AI, PENDING_SANDBOX, PENDING_FACULTY, APPROVED
+  
+  // AI Generated Fields (Nullable until processed)
+  title           String?
+  description     String?
+  constraints     String?
+  category        String?
+  subtopic        String?  @default("General")
+  solutionCode    String?
+  solutionLang    String?  @default("python")
+  taxonomyPath    String?
+  
+  // Vector Embeddings for Deduplication
+  embedding       Unsupported("vector(384)")?
+  
+  // Sandbox Generated Fields
+  testCases       Json?
+  sandboxVerdict  String?
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([status])
+  @@index([category])
+}
+
+model User {
+  id          String       @id @default(uuid())
+  githubId    String?      @unique  // Made optional for native auth
+  email       String?      @unique  // Added for native auth
+  password    String?      // Added for native auth
+  username    String
+  createdAt   DateTime     @default(now())
+  
+  // Profile Stats
+  rank        Int          @default(1000000)
+  reputation  Int          @default(0)
+  views       Int          @default(0)
+  discuss     Int          @default(0)
+  solution    Int          @default(0)
+  contestRating Int        @default(1400)
+  globalRanking Int        @default(100000)
+  attendedContests Int     @default(0)
+
+  submissions Submission[] // Relation to track solved problems
+
+  @@index([email])
+}
+
+model Question {
+  id          String       @id @default(uuid())
+  category    String       // DSA, DB, ML, SysDesign
+  subtopic    String       @default("General") // e.g., DP, BFS, DFS
+  type        String       @default("Programming") // "Programming" or "Theory"
+  difficulty  String       @default("Medium") // Easy, Medium, Hard
+  title       String
+  description String
+  testCases   Json?    
+  metadata    Json?        // For expected_keywords, scoring_rubric, detailed_answer
+  companies   String[]     @default([]) // Companies that asked this question
+  submissions Submission[] // Relation to track who solved it
+
+  @@index([difficulty])
+  @@index([category])
+}
+
+model Submission {
+  id          String   @id @default(uuid())
+  userId      String
+  questionId  String
+  status      String   // e.g., "Pass", "Fail", "Evaluated"
+  score       Int?     // For theory questions out of 100
+  feedback    String?  // LLM feedback for theory questions
+  code        String   // Can store the text answer for theory questions
+  language    String
+  submittedAt DateTime @default(now())
+
+  user        User     @relation(fields: [userId], references: [id])
+  question    Question @relation(fields: [questionId], references: [id])
+
+  @@index([userId])
+  @@index([questionId])
+  @@index([userId, questionId])
+}

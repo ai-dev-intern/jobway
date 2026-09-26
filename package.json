@@ -1,0 +1,23 @@
+{
+  "name": "job-way",
+  "version": "1.0.0",
+  "description": "Job Way is a guided career-discovery and interview-preparation platform.",
+  "main": "index.js",
+  "scripts": {
+    "test:e2e": "playwright test --project=chromium"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/joythomasl/jobway.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/joythomasl/jobway/issues"
+  },
+  "homepage": "https://github.com/joythomasl/jobway#readme",
+  "devDependencies": {
+    "@playwright/test": "^1.63.0"
+  }
+}

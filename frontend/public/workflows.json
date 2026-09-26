@@ -1,0 +1,140 @@
+{
+  "roles": [
+    {
+      "id": "backend_swe",
+      "title": "Backend & Distributed Systems SWE",
+      "icon": "server",
+      "summary": "Build reliable APIs, services, databases, and distributed systems.",
+      "rationale": "You enjoy data flow, service boundaries, reliability, and performance trade-offs.",
+      "key_topics": ["Hash Table", "Trees", "Graphs", "DBMS", "Networks", "OS"],
+      "top_hiring_companies": ["Amazon", "Google", "Uber", "Oracle"],
+      "phases": [
+        {"number": 1, "title": "Core Algorithmic Foundations", "description": "Arrays, strings, hashing, and window patterns.", "topics": ["Array", "String", "Hash Table", "Two Pointers", "Sliding Window"]},
+        {"number": 2, "title": "Backend Data Structures", "description": "Queues, trees, heaps, lists, and ordering.", "topics": ["Queue", "Tree", "Heap", "Linked List", "Sorting"]},
+        {"number": 3, "title": "Distributed Systems Core", "description": "Graphs, dynamic programming, databases, operating systems, and networks.", "topics": ["Graph", "Dynamic Programming", "DBMS", "OS", "Networks"]},
+        {"number": 4, "title": "Backend Interview Sprint", "description": "A frequency-weighted 30/90-day company sprint.", "topics": []}
+      ]
+    },
+    {
+      "id": "fullstack_swe", "title": "Full-Stack Product SWE", "icon": "layers", "summary": "Ship polished products across browser, API, and data layers.",
+      "rationale": "You like owning user outcomes end to end and moving comfortably between UI and services.",
+      "key_topics": ["Arrays", "Strings", "Trees", "DBMS", "Networks", "OOP"], "top_hiring_companies": ["Microsoft", "Zoho", "Flipkart", "Atlassian"],
+      "phases": [
+        {"number": 1, "title": "Core Algorithmic Foundations", "description": "Build fast pattern recognition.", "topics": ["Array", "String", "Hash Table", "Sliding Window"]},
+        {"number": 2, "title": "Product Data Structures", "description": "Model interactive product state.", "topics": ["Stack", "Queue", "Tree", "Heap", "Sorting"]},
+        {"number": 3, "title": "Full-Stack Core CS", "description": "Connect frontend decisions to databases and networks.", "topics": ["Graph", "Dynamic Programming", "DBMS", "Networks", "OOP"]},
+        {"number": 4, "title": "Product Engineering Sprint", "description": "Practice current company favorites.", "topics": []}
+      ]
+    },
+    {
+      "id": "frontend_swe", "title": "Frontend & UI Engineering SWE", "icon": "layout", "summary": "Engineer accessible, fast, stateful user interfaces.",
+      "rationale": "You notice interaction details and enjoy turning complex state into intuitive experiences.",
+      "key_topics": ["Strings", "Trees", "Graphs", "Hash Table", "OOP"], "top_hiring_companies": ["Google", "Microsoft", "Adobe", "Airbnb"],
+      "phases": [
+        {"number": 1, "title": "Core Algorithmic Foundations", "description": "Arrays, strings, maps, and windows.", "topics": ["Array", "String", "Hash Table", "Sliding Window"]},
+        {"number": 2, "title": "UI Data Structures", "description": "Trees, stacks, queues, and ordering.", "topics": ["Tree", "Stack", "Queue", "Sorting"]},
+        {"number": 3, "title": "Frontend Architecture Core", "description": "Graph-shaped state, performance, networking, and OOP.", "topics": ["Graph", "Dynamic Programming", "Networks", "OOP"]},
+        {"number": 4, "title": "Frontend Interview Sprint", "description": "High-frequency frontend-friendly problems.", "topics": []}
+      ]
+    },
+    {
+      "id": "ai_ml_swe", "title": "AI / ML & Data Science SWE", "icon": "brain", "summary": "Build intelligent products, data pipelines, and model-serving systems.",
+      "rationale": "You enjoy experiments, quantitative reasoning, and learning from data.",
+      "key_topics": ["Arrays", "Matrix", "Graphs", "Dynamic Programming", "Math", "ML"], "top_hiring_companies": ["Google", "Amazon", "Microsoft", "NVIDIA"],
+      "phases": [
+        {"number": 1, "title": "Core Algorithmic Foundations", "description": "Arrays, hashing, and mathematical thinking.", "topics": ["Array", "Hash Table", "Math", "Sliding Window"]},
+        {"number": 2, "title": "ML Data Structures", "description": "Matrices, heaps, trees, and sorting.", "topics": ["Matrix", "Heap", "Tree", "Sorting"]},
+        {"number": 3, "title": "AI/ML Algorithms & Core", "description": "Graphs, DP, optimization, and ML systems.", "topics": ["Graph", "Dynamic Programming", "Greedy", "ML"]},
+        {"number": 4, "title": "AI/ML Interview Sprint", "description": "A focused algorithm and ML systems sprint.", "topics": []}
+      ]
+    },
+    {
+      "id": "data_swe", "title": "Data & Platform Engineering SWE", "icon": "database", "summary": "Design trustworthy pipelines, storage, and analytics platforms.",
+      "rationale": "You like organizing large data flows and making systems observable and dependable.",
+      "key_topics": ["Hash Table", "Heap", "Graph", "DBMS", "Queue"], "top_hiring_companies": ["Amazon", "Uber", "Oracle", "Flipkart"],
+      "phases": [
+        {"number": 1, "title": "Core Algorithmic Foundations", "description": "Data transformation fundamentals.", "topics": ["Array", "String", "Hash Table"]},
+        {"number": 2, "title": "Platform Data Structures", "description": "Queues, heaps, matrices, and sorting.", "topics": ["Queue", "Heap", "Matrix", "Sorting"]},
+        {"number": 3, "title": "Data Systems Core", "description": "Graphs, DP, databases, and networks.", "topics": ["Graph", "Dynamic Programming", "DBMS", "Networks"]},
+        {"number": 4, "title": "Data Engineering Sprint", "description": "Frequency-ranked platform interview practice.", "topics": []}
+      ]
+    },
+    {
+      "id": "cloud_devops_swe", "title": "Cloud, DevOps & SRE SWE", "icon": "cloud", "summary": "Automate resilient infrastructure and operate production systems.",
+      "rationale": "You are drawn to reliability, automation, incident response, and system-wide behavior.",
+      "key_topics": ["Graphs", "Queues", "OS", "Networks", "System Design"], "top_hiring_companies": ["Amazon", "Google", "Microsoft", "Oracle"],
+      "phases": [
+        {"number": 1, "title": "Core Algorithmic Foundations", "description": "Build dependable coding fundamentals.", "topics": ["Array", "String", "Hash Table"]},
+        {"number": 2, "title": "Infrastructure Data Structures", "description": "Queues, heaps, trees, and scheduling.", "topics": ["Queue", "Heap", "Tree"]},
+        {"number": 3, "title": "Cloud & Reliability Core", "description": "Operating systems, networks, graphs, and databases.", "topics": ["Graph", "OS", "Networks", "DBMS"]},
+        {"number": 4, "title": "SRE Interview Sprint", "description": "Production-minded interview preparation.", "topics": []}
+      ]
+    },
+    {
+      "id": "systems_swe", "title": "Systems & Low-Level SWE", "icon": "cpu", "summary": "Work close to hardware, runtimes, compilers, and operating systems.",
+      "rationale": "You enjoy memory, concurrency, performance, and understanding what abstractions hide.",
+      "key_topics": ["Arrays", "Linked List", "Trees", "Graphs", "OS", "Networks"], "top_hiring_companies": ["Google", "Microsoft", "NVIDIA", "AMD"],
+      "phases": [
+        {"number": 1, "title": "Core Algorithmic Foundations", "description": "Build precise low-level problem solving.", "topics": ["Array", "String", "Two Pointers", "Math"]},
+        {"number": 2, "title": "Systems Data Structures", "description": "Lists, stacks, queues, and trees.", "topics": ["Linked List", "Stack", "Queue", "Tree"]},
+        {"number": 3, "title": "Systems Algorithms & Core", "description": "Graphs, DP, operating systems, and networks.", "topics": ["Graph", "Dynamic Programming", "OS", "Networks"]},
+        {"number": 4, "title": "Systems Interview Sprint", "description": "Hard, performance-oriented company practice.", "topics": []}
+      ]
+    },
+    {
+      "id": "mobile_swe", "title": "Mobile App Developer", "icon": "smartphone", "summary": "Create smooth Android, iOS, and cross-platform mobile experiences.",
+      "rationale": "You enjoy building useful apps that people can carry and use every day.",
+      "key_topics": ["Arrays", "Trees", "OOP", "Networks", "DBMS", "UI"], "top_hiring_companies": ["Google", "Microsoft", "Amazon", "Flipkart"],
+      "phases": [
+        {"number": 1, "title": "Mobile Coding Foundations", "description": "Arrays, strings, state, and clean problem solving.", "topics": ["Array", "String", "Hash Table", "Two Pointers"]},
+        {"number": 2, "title": "App Data Structures", "description": "Model navigation, feeds, caching, and local state.", "topics": ["Stack", "Queue", "Tree", "Sorting"]},
+        {"number": 3, "title": "Mobile Engineering Core", "description": "Networking, storage, OOP, performance, and architecture.", "topics": ["Networks", "DBMS", "OOP", "Graph", "Dynamic Programming"]},
+        {"number": 4, "title": "Mobile Interview Sprint", "description": "Practice coding and mobile architecture questions.", "topics": []}
+      ]
+    },
+    {
+      "id": "cybersecurity_swe", "title": "Cybersecurity Engineer", "icon": "shield", "summary": "Protect applications, networks, identities, and sensitive data.",
+      "rationale": "You like finding weaknesses, investigating unusual behavior, and making systems safer.",
+      "key_topics": ["Networks", "OS", "Graphs", "Cryptography", "DBMS", "Security"], "top_hiring_companies": ["Microsoft", "Google", "Cisco", "Palo Alto Networks"],
+      "phases": [
+        {"number": 1, "title": "Security Coding Foundations", "description": "Build precise coding and input-validation habits.", "topics": ["Array", "String", "Hash Table", "Math"]},
+        {"number": 2, "title": "Security Data Structures", "description": "Track events, identities, dependencies, and access.", "topics": ["Stack", "Queue", "Tree", "Graph"]},
+        {"number": 3, "title": "Security Systems Core", "description": "Operating systems, networks, databases, and secure design.", "topics": ["OS", "Networks", "DBMS", "Graph"]},
+        {"number": 4, "title": "Cybersecurity Interview Sprint", "description": "Practice security scenarios and coding interviews.", "topics": []}
+      ]
+    },
+    {
+      "id": "qa_automation_swe", "title": "QA & Automation Engineer", "icon": "bug", "summary": "Design tests, automate quality checks, and prevent costly bugs.",
+      "rationale": "You naturally explore edge cases and enjoy making software dependable for everyone.",
+      "key_topics": ["Arrays", "Strings", "Testing", "OOP", "DBMS", "Networks"], "top_hiring_companies": ["Microsoft", "Adobe", "Atlassian", "Zoho"],
+      "phases": [
+        {"number": 1, "title": "Testing Foundations", "description": "Problem solving, edge cases, and clear test inputs.", "topics": ["Array", "String", "Hash Table"]},
+        {"number": 2, "title": "Automation Data Structures", "description": "Queues, trees, ordering, and reusable automation.", "topics": ["Queue", "Tree", "Sorting", "OOP"]},
+        {"number": 3, "title": "Quality Engineering Core", "description": "Test architecture, databases, networks, and CI systems.", "topics": ["DBMS", "Networks", "Graph", "OOP"]},
+        {"number": 4, "title": "QA Interview Sprint", "description": "Practice automation coding and test-design scenarios.", "topics": []}
+      ]
+    },
+    {
+      "id": "game_swe", "title": "Game Developer", "icon": "gamepad", "summary": "Build interactive worlds, gameplay systems, tools, and simulations.",
+      "rationale": "You enjoy visual feedback, real-time interaction, physics, and creative technical work.",
+      "key_topics": ["Math", "Arrays", "Graphs", "Trees", "OOP", "OS"], "top_hiring_companies": ["Microsoft", "NVIDIA", "Ubisoft", "Electronic Arts"],
+      "phases": [
+        {"number": 1, "title": "Game Programming Foundations", "description": "Arrays, geometry-friendly math, and state updates.", "topics": ["Array", "String", "Math", "Two Pointers"]},
+        {"number": 2, "title": "Gameplay Data Structures", "description": "Trees, graphs, queues, spatial state, and ordering.", "topics": ["Tree", "Graph", "Queue", "Sorting"]},
+        {"number": 3, "title": "Real-Time Systems Core", "description": "Pathfinding, optimization, memory, and object design.", "topics": ["Graph", "Dynamic Programming", "Greedy", "OS", "OOP"]},
+        {"number": 4, "title": "Game Engineering Sprint", "description": "Practice real-time coding and architecture questions.", "topics": []}
+      ]
+    },
+    {
+      "id": "product_ux_swe", "title": "Product & UX Engineer", "icon": "palette", "summary": "Blend design thinking and frontend engineering into delightful products.",
+      "rationale": "You care about how a product feels, why people use it, and how code can remove friction.",
+      "key_topics": ["Accessibility", "UI", "Strings", "Trees", "OOP", "Analytics"], "top_hiring_companies": ["Google", "Microsoft", "Adobe", "Atlassian"],
+      "phases": [
+        {"number": 1, "title": "Product Coding Foundations", "description": "User-focused problem solving with arrays, strings, and maps.", "topics": ["Array", "String", "Hash Table", "Sliding Window"]},
+        {"number": 2, "title": "Interface Data Structures", "description": "Trees, state history, queues, and predictable interactions.", "topics": ["Tree", "Stack", "Queue", "Sorting"]},
+        {"number": 3, "title": "Product Engineering Core", "description": "Accessibility, networking, data, performance, and OOP.", "topics": ["Networks", "DBMS", "OOP", "Graph"]},
+        {"number": 4, "title": "Product & UX Interview Sprint", "description": "Practice frontend coding and product-thinking scenarios.", "topics": []}
+      ]
+    }
+  ]
+}

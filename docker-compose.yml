@@ -1,0 +1,98 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg15
+    container_name: feeder-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-jobway}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: ${POSTGRES_DB:-jobway}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-jobway} -d ${POSTGRES_DB:-jobway}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  executor:
+    build:
+      context: ./executor
+      dockerfile: Dockerfile
+    container_name: feeder-executor
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      EXECUTOR_TOKEN: ${EXECUTOR_TOKEN:?Set EXECUTOR_TOKEN in .env (min 32 chars)}
+    read_only: true
+    tmpfs:
+      - /app/temp:rw,noexec,nosuid,size=64m
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 64
+    mem_limit: 256m
+    cpus: 0.75
+    networks:
+      - sandbox
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"require('http').get('http://localhost:8080/health', (r) => { process.exit(r.statusCode === 200 ? 0 : 1); });\""]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: feeder-backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      executor:
+        condition: service_healthy
+    ports:
+      - "3000:3000"
+    command: node dist/index.js
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      PORT: 3000
+      NODE_ENV: production
+      DATABASE_URL: postgresql://${POSTGRES_USER:-jobway}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-jobway}
+      DIRECT_URL: postgresql://${POSTGRES_USER:-jobway}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-jobway}
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env (min 32 chars)}
+      ADMIN_API_TOKEN: ${ADMIN_API_TOKEN:-}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173}
+      EXECUTOR_URL: http://executor:8080
+      EXECUTOR_TOKEN: ${EXECUTOR_TOKEN:?Set EXECUTOR_TOKEN in .env (min 32 chars)}
+    networks:
+      - default
+      - sandbox
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"require('http').get('http://localhost:3000/', (r) => { process.exit(r.statusCode === 200 ? 0 : 1); });\""]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: feeder-frontend
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "5173:8080"
+
+volumes:
+  pgdata:
+
+networks:
+  sandbox:
+    internal: true

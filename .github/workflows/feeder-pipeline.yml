@@ -1,0 +1,363 @@
+name: ⚙️ Automated Feeder CI/CD & Pipeline Monitor
+
+on:
+  push:
+    branches: [ main, develop, "feature/**" ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    # Run nightly at 2:00 AM IST (20:30 UTC) to continuously monitor pipeline liveness & LLM upstream connectivity
+    - cron: '30 20 * * *'
+  workflow_dispatch:
+    inputs:
+      skip_docker:
+        description: 'Skip Docker container verification to accelerate pipeline'
+        required: false
+        default: false
+        type: boolean
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  # =========================================================================
+  # STAGE 1: Fast Quality Gate (Static Analysis, Lint & Typecheck)
+  # =========================================================================
+  quality-gate:
+    name: 🛡️ Quality Gate (Typecheck, Build & Security)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: 📥 Check out repository
+        uses: actions/checkout@v4
+
+      - name: 🟢 Setup Node.js (v20)
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: |
+            backend/package-lock.json
+            frontend/package-lock.json
+            executor/package-lock.json
+
+      - name: 📦 Install Dependencies
+        run: |
+          echo "📦 Installing Backend Dependencies..."
+          cd backend && npm ci --ignore-scripts || npm install
+          
+          echo "📦 Installing Frontend Dependencies..."
+          cd ../frontend && npm ci || npm install
+
+      - name: 🔍 Prisma Schema Validation
+        run: |
+          cd backend
+          npx prisma validate
+
+      - name: 🏗️ Typecheck & Compile Backend
+        run: |
+          cd backend
+          npx prisma generate
+          npx tsc --noEmit
+
+      - name: 🎨 Typecheck & Build Frontend SPA
+        run: |
+          cd frontend
+          npm run typecheck
+          npm run build
+
+      - name: 🔒 Security Audit (Non-blocking warning)
+        run: |
+          npm audit --audit-level=critical || echo "⚠️ Non-critical audit advisory detected"
+
+  # =========================================================================
+  # STAGE 2: Unit & Security Test Suite (XML, Deduplication, Sandbox)
+  # =========================================================================
+  unit-and-security:
+    name: 🧪 Unit & Security Suite (Moodle XML, Vector Dedup, Sandbox)
+    runs-on: ubuntu-latest
+    needs: quality-gate
+    timeout-minutes: 10
+
+    steps:
+      - name: 📥 Check out repository
+        uses: actions/checkout@v4
+
+      - name: 🟢 Setup Node.js (v20)
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: 🐍 Setup Python 3
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: 📦 Install Backend & Executor Dependencies
+        run: |
+          cd backend && npm ci --ignore-scripts || npm install
+          cd ../executor && npm ci || npm install
+
+      - name: 📑 Execute Moodle CodeRunner XML Builder Tests
+        run: |
+          cd backend
+          npx tsx src/moodleXmlBuilder.test.ts
+
+      - name: 🧠 Execute 384-d Vector Embedding & Deduplication Tests
+        run: |
+          cd backend
+          npx tsx src/embeddingService.test.ts
+
+      - name: 🐳 Execute Sandbox Isolation & Timeout Enforcement Suite
+        run: |
+          cd executor
+          node server.js &
+          EXECUTOR_PID=$!
+          sleep 2
+          
+          # Runs integration suite: Valid code, Wrong Answer detection, 2.0s infinite loop timeout
+          node test_sandbox.js
+          TEST_STATUS=$?
+          
+          kill $EXECUTOR_PID 2>/dev/null || true
+          exit $TEST_STATUS
+
+  # =========================================================================
+  # STAGE 3: Production Containerization Verification (CD Gate)
+  # =========================================================================
+  docker-build:
+    name: 🐳 Containerization Verification (CD Gate)
+    runs-on: ubuntu-latest
+    needs: quality-gate
+    if: ${{ !inputs.skip_docker }}
+    timeout-minutes: 12
+
+    steps:
+      - name: 📥 Check out repository
+        uses: actions/checkout@v4
+
+      - name: 🔧 Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: 📋 Validate Docker Compose Orchestration Config
+        run: |
+          touch .env
+          docker compose config
+
+      - name: 🔨 Build Executor Sandbox Image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./executor
+          file: ./executor/Dockerfile
+          push: false
+          tags: placement-portal/executor:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: 🔨 Build Backend Image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          file: ./backend/Dockerfile
+          push: false
+          tags: placement-portal/backend:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: 🔨 Build Frontend Image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend
+          file: ./frontend/Dockerfile
+          push: false
+          tags: placement-portal/frontend:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # =========================================================================
+  # STAGE 4: Full E2E Feeder Pipeline & Liveness Monitor
+  # =========================================================================
+  e2e-pipeline-monitor:
+    name: 🔬 Full E2E Pipeline (Ingest -> Sandbox -> Staging -> Moodle XML)
+    runs-on: ubuntu-latest
+    needs: [quality-gate, unit-and-security]
+    timeout-minutes: 15
+
+    env:
+      DATABASE_URL: postgresql://admin:adminpassword@127.0.0.1:5432/placement_portal
+      DIRECT_URL: postgresql://admin:adminpassword@127.0.0.1:5432/placement_portal
+      EXECUTOR_URL: http://127.0.0.1:8080
+      VITE_API_BASE: http://127.0.0.1:3000
+      GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+
+    services:
+      postgres:
+        image: pgvector/pgvector:pg15
+        env:
+          POSTGRES_USER: admin
+          POSTGRES_PASSWORD: adminpassword
+          POSTGRES_DB: placement_portal
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: 📥 Check out repository
+        uses: actions/checkout@v4
+
+      - name: 🟢 Setup Node.js (v20)
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: 🐍 Setup Python 3
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: 📦 Install All Dependencies
+        run: |
+          npm install
+          cd executor && npm ci || npm install
+          cd ../backend && npm ci --ignore-scripts || npm install
+          cd ../frontend && npm ci || npm install
+          cd ..
+
+      - name: 🗄️ Prepare Database Schema & Prisma Client
+        run: |
+          cd backend
+          npx prisma generate
+          npx prisma db push --accept-data-loss
+
+      - name: 🚀 Start Services (Executor + Backend + Frontend)
+        env:
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+        run: |
+          if [ -z "$GROQ_API_KEY" ]; then
+            echo "::warning::GROQ_API_KEY secret is not set or empty in GitHub Secrets!"
+          else
+            echo "✅ GROQ_API_KEY secret verified (length: ${#GROQ_API_KEY})"
+          fi
+
+          echo "Starting Executor on :8080..."
+          (cd executor && PORT=8080 node server.js) > /tmp/executor.log 2>&1 &
+          
+          echo "Starting Backend on :3000..."
+          (cd backend && PORT=3000 GROQ_API_KEY="$GROQ_API_KEY" npx tsx src/index.ts) > /tmp/backend.log 2>&1 &
+          
+          echo "Starting Frontend on :5173..."
+          (cd frontend && npx vite --host 0.0.0.0 --port 5173) > /tmp/frontend.log 2>&1 &
+          
+          echo "Waiting for services to become healthy..."
+          for i in {1..35}; do
+            if curl -s http://127.0.0.1:8080/health > /dev/null && \
+               curl -s http://127.0.0.1:3000/health > /dev/null && \
+               curl -s http://127.0.0.1:5173/ > /dev/null; then
+              echo "✅ All services healthy on attempt $i!"
+              break
+            fi
+            sleep 1
+          done
+
+          if ! curl -s http://127.0.0.1:8080/health > /dev/null || \
+             ! curl -s http://127.0.0.1:3000/health > /dev/null || \
+             ! curl -s http://127.0.0.1:5173/ > /dev/null; then
+            echo "❌ Service readiness timeout! Printing service diagnostic logs:"
+            echo "=== EXECUTOR LOG ==="
+            cat /tmp/executor.log || true
+            echo "=== BACKEND LOG ==="
+            cat /tmp/backend.log || true
+            echo "=== FRONTEND LOG ==="
+            cat /tmp/frontend.log || true
+            exit 1
+          fi
+
+      - name: 🎭 Install Playwright Chromium
+        run: npx -y playwright install --with-deps chromium
+
+      - name: 🧪 Execute Playwright Feeder E2E Suite
+        run: npx -y playwright test e2e/feeder-flow.spec.ts --project=chromium
+
+      - name: 📋 Dump Service Logs on E2E Failure
+        if: failure()
+        run: |
+          echo "=== EXECUTOR LOGS ==="
+          cat /tmp/executor.log || true
+          echo "=== BACKEND LOGS ==="
+          cat /tmp/backend.log || true
+          echo "=== FRONTEND LOGS ==="
+          cat /tmp/frontend.log || true
+
+      - name: 📊 Generate GitHub Step Summary Report
+        if: always()
+        run: |
+          echo "## 📊 Feeder Pipeline Execution Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Check / Component | Status | Details |" >> $GITHUB_STEP_SUMMARY
+          echo "| :--- | :---: | :--- |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Quality Gate (Typecheck & Build)** | ✅ Passed | Frontend SPA & Backend API compiled with zero errors |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Moodle CodeRunner XML Builder** | ✅ Passed | CDATA escaping, question category hierarchy verified |" >> $GITHUB_STEP_SUMMARY
+          echo "| **384-d Embedding & Dedup** | ✅ Passed | Cosine similarity bounds and duplicate detection verified |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Sandbox Execution & Security** | ✅ Passed | 2.0s infinite loop timeout & memory isolation enforced |" >> $GITHUB_STEP_SUMMARY
+          echo "| **E2E Feeder Pipeline** | ${{ job.status == 'success' && '✅ Passed' || '❌ Failed' }} | End-to-end ingestion, 10/10 sandbox check, and Staging UI |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "> Run ID: \`${{ github.run_id }}\` | Commit: \`${{ github.sha }}\` | Branch: \`${{ github.ref_name }}\`" >> $GITHUB_STEP_SUMMARY
+
+      - name: 📁 Upload Playwright Test Artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-e2e-report
+          path: playwright-report/
+          retention-days: 14
+
+  # =========================================================================
+  # STAGE 5: Incident Alerting
+  # =========================================================================
+  alert-on-failure:
+    name: 🚨 Automated Incident Dispatcher
+    runs-on: ubuntu-latest
+    needs: [quality-gate, unit-and-security, e2e-pipeline-monitor]
+    if: failure() && (github.event_name == 'schedule' || github.ref == 'refs/heads/main')
+
+    steps:
+      - name: 📧 Send Email Alert
+        if: ${{ env.EMAIL_USERNAME != '' && env.EMAIL_PASSWORD != '' }}
+        uses: dawidd6/action-send-mail@v3
+        env:
+          EMAIL_USERNAME: ${{ secrets.EMAIL_USERNAME }}
+          EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
+        with:
+          server_address: ${{ secrets.SMTP_SERVER || 'smtp.gmail.com' }}
+          server_port: ${{ secrets.SMTP_PORT || 465 }}
+          username: ${{ secrets.EMAIL_USERNAME }}
+          password: ${{ secrets.EMAIL_PASSWORD }}
+          subject: "❌ [ALERT] Placement Portal Feeder Pipeline Failed (${{ github.ref_name }})"
+          to: ${{ secrets.ALERT_EMAIL || secrets.EMAIL_USERNAME }}
+          from: "Feeder CI/CD Monitor <${{ secrets.EMAIL_USERNAME }}>"
+          html_body: |
+            <h2>🚨 Feeder Pipeline Liveness Failure Detected</h2>
+            <p>The daily automated Playwright E2E monitor failed on branch <code>${{ github.ref_name }}</code>.</p>
+            <table border="1" cellpadding="8" style="border-collapse: collapse;">
+              <tr><td><strong>Commit SHA</strong></td><td><code>${{ github.sha }}</code></td></tr>
+              <tr><td><strong>Trigger Type</strong></td><td><code>${{ github.event_name }}</code></td></tr>
+              <tr><td><strong>Repository</strong></td><td><code>${{ github.repository }}</code></td></tr>
+              <tr><td><strong>Run Logs</strong></td><td><a href="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}">View GitHub Actions Logs</a></td></tr>
+            </table>
+            <br/>
+            <p><strong>Action Required:</strong> Download the <code>playwright-e2e-report</code> artifact from the run page to view screenshots, network calls, and sandbox logs of the failure.</p>
+
+      - name: 💬 Send Webhook Notification (Discord / Slack)
+        if: ${{ env.DISCORD_WEBHOOK_URL != '' }}
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: |
+          curl -H "Content-Type: application/json" -X POST -d '{
+            "content": "🚨 **ALERT: Placement Portal Feeder Pipeline Failed!**\n**Branch:** `'"${{ github.ref_name }}"'`\n**Commit:** `'"${{ github.sha }}"'`\n**Logs:** https://github.com/'"${{ github.repository }}"'/actions/runs/'"${{ github.run_id }}"'"
+          }' "$DISCORD_WEBHOOK_URL" || echo "Webhook notification skipped or failed"

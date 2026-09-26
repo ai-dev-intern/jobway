@@ -1,0 +1,5 @@
+node_modules
+temp
+.env*
+*.log
+test_sandbox.js

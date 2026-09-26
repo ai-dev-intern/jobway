@@ -1,0 +1,105 @@
+.navbar {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  padding: 16px 0;
+}
+
+.nav-brand {
+  gap: 12px;
+}
+
+.brand-text {
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  color: var(--text-main);
+}
+
+.nav-links {
+  gap: 18px;
+}
+
+.brand-text small {
+  display: block;
+  margin-top: -2px;
+  color: var(--text-muted);
+  font-size: .48rem;
+  letter-spacing: .18em;
+}
+
+@media (max-width: 900px) {
+  .navbar .container { align-items: flex-start; }
+  .nav-links { gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
+  .auth-group { display: none; }
+  .theme-picker select { max-width: 82px; }
+}
+
+.nav-link {
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.nav-link:hover {
+  color: var(--text-main);
+}
+
+.nav-link.active { color: var(--text-main); }
+.nav-link.active::after {
+  content: '';
+  display: block;
+  height: 2px;
+  margin-top: 5px;
+  border-radius: 2px;
+  background: var(--accent-primary);
+}
+
+.theme-toggle,.theme-picker {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 11px;
+  border: 1px solid var(--border-color);
+  border-radius: 99px;
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  font-size: .72rem;
+  font-weight: 700;
+}
+
+.theme-toggle:hover,.theme-picker:hover { color: var(--text-main); border-color: var(--border-highlight); }
+.theme-picker select{border:0;outline:0;background:transparent;color:inherit;font:700 .72rem var(--font-sans);cursor:pointer}.theme-picker option{color:#172137;background:#fff}
+
+.auth-group {
+  gap: 16px;
+  margin-left: 16px;
+  padding-left: 24px;
+  border-left: 1px solid var(--border-color);
+}
+
+.nav-user {
+  gap: 8px;
+  color: var(--text-main);
+  font-weight: 500;
+}
+
+.nav-user:hover {
+  color: var(--accent-primary);
+}
+
+.btn-icon {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+.btn-icon:hover {
+  color: var(--error);
+  background: rgba(239, 68, 68, 0.1);
+}

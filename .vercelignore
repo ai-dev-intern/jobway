@@ -1,0 +1,15 @@
+# The Vercel project is a public static frontend deployment only.
+backend/
+executor/
+pipeline/
+scraper/
+tests/
+e2e/
+docs/
+.github/
+.tools/
+.uv-cache/
+.uv-python/
+.env*
+docker-compose.yml
+MASTER_BUILD_PROMPT.md

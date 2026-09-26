@@ -1,0 +1,102 @@
+[
+  {
+    "id": "q1",
+    "scenario": "Which project sounds the most fun to build?",
+    "options": [
+      {"id":"a","label":"A website people can use","weights":{"frontend_swe":3,"fullstack_swe":4,"product_ux_swe":3}},
+      {"id":"b","label":"A phone app","weights":{"mobile_swe":4,"product_ux_swe":2}},
+      {"id":"c","label":"A smart tool that learns from data","weights":{"ai_ml_swe":4,"data_swe":2}},
+      {"id":"d","label":"A game","weights":{"game_swe":4,"systems_swe":2}}
+    ]
+  },
+  {
+    "id": "q2",
+    "scenario": "What kind of problem would you enjoy fixing?",
+    "options": [
+      {"id":"a","label":"A page that is confusing to use","weights":{"product_ux_swe":4,"frontend_swe":3}},
+      {"id":"b","label":"An app that becomes slow","weights":{"backend_swe":3,"systems_swe":3,"mobile_swe":2}},
+      {"id":"c","label":"Information that is messy or wrong","weights":{"data_swe":4,"qa_automation_swe":2}},
+      {"id":"d","label":"A system that may not be safe","weights":{"cybersecurity_swe":4,"cloud_devops_swe":2}}
+    ]
+  },
+  {
+    "id": "q3",
+    "scenario": "Which part of technology interests you most?",
+    "options": [
+      {"id":"a","label":"What users see and click","weights":{"frontend_swe":4,"product_ux_swe":4}},
+      {"id":"b","label":"What happens behind the screen","weights":{"backend_swe":4,"fullstack_swe":2}},
+      {"id":"c","label":"How computers and memory work","weights":{"systems_swe":4,"game_swe":2}},
+      {"id":"d","label":"How servers stay online","weights":{"cloud_devops_swe":4,"cybersecurity_swe":2}}
+    ]
+  },
+  {
+    "id": "q4",
+    "scenario": "Which task sounds most satisfying?",
+    "options": [
+      {"id":"a","label":"Making an app look and feel better","weights":{"frontend_swe":3,"mobile_swe":3,"product_ux_swe":4}},
+      {"id":"b","label":"Making a service handle more users","weights":{"backend_swe":4,"cloud_devops_swe":3}},
+      {"id":"c","label":"Finding a bug before anyone else does","weights":{"qa_automation_swe":4,"cybersecurity_swe":2}},
+      {"id":"d","label":"Finding a useful pattern in data","weights":{"data_swe":3,"ai_ml_swe":4}}
+    ]
+  },
+  {
+    "id": "q5",
+    "scenario": "How do you like to see your work succeed?",
+    "options": [
+      {"id":"a","label":"People enjoy using it","weights":{"product_ux_swe":4,"frontend_swe":3,"mobile_swe":3}},
+      {"id":"b","label":"It runs quickly and reliably","weights":{"backend_swe":3,"systems_swe":4,"cloud_devops_swe":3}},
+      {"id":"c","label":"It gives an accurate answer","weights":{"ai_ml_swe":4,"data_swe":3}},
+      {"id":"d","label":"It catches mistakes automatically","weights":{"qa_automation_swe":4,"cybersecurity_swe":2}}
+    ]
+  },
+  {
+    "id": "q6",
+    "scenario": "Which school subject or activity do you prefer?",
+    "options": [
+      {"id":"a","label":"Art, design, or presentations","weights":{"product_ux_swe":4,"frontend_swe":3}},
+      {"id":"b","label":"Math or finding patterns","weights":{"ai_ml_swe":4,"data_swe":3,"game_swe":2}},
+      {"id":"c","label":"Experiments and checking results","weights":{"qa_automation_swe":4,"cybersecurity_swe":2}},
+      {"id":"d","label":"Building and taking things apart","weights":{"systems_swe":4,"mobile_swe":2,"backend_swe":2}}
+    ]
+  },
+  {
+    "id": "q7",
+    "scenario": "What would you like to learn first?",
+    "options": [
+      {"id":"a","label":"How to make websites","weights":{"frontend_swe":4,"fullstack_swe":4,"product_ux_swe":2}},
+      {"id":"b","label":"How to make Android or iPhone apps","weights":{"mobile_swe":4,"fullstack_swe":2}},
+      {"id":"c","label":"How AI works","weights":{"ai_ml_swe":4,"data_swe":2}},
+      {"id":"d","label":"How hackers and security work","weights":{"cybersecurity_swe":4,"cloud_devops_swe":2}}
+    ]
+  },
+  {
+    "id": "q8",
+    "scenario": "If an app stops working, what would you check first?",
+    "options": [
+      {"id":"a","label":"What the user clicked","weights":{"frontend_swe":3,"qa_automation_swe":3,"product_ux_swe":2}},
+      {"id":"b","label":"The server and saved data","weights":{"backend_swe":4,"data_swe":2}},
+      {"id":"c","label":"The internet and cloud setup","weights":{"cloud_devops_swe":4,"cybersecurity_swe":2}},
+      {"id":"d","label":"The phone or computer memory","weights":{"systems_swe":4,"mobile_swe":3,"game_swe":2}}
+    ]
+  },
+  {
+    "id": "q9",
+    "scenario": "Which result would make you proudest?",
+    "options": [
+      {"id":"a","label":"A beautiful product anyone can understand","weights":{"product_ux_swe":4,"frontend_swe":3}},
+      {"id":"b","label":"A service used by millions of people","weights":{"backend_swe":4,"fullstack_swe":3,"cloud_devops_swe":2}},
+      {"id":"c","label":"A game people cannot stop playing","weights":{"game_swe":4,"mobile_swe":2}},
+      {"id":"d","label":"A safer system with fewer risks","weights":{"cybersecurity_swe":4,"qa_automation_swe":3}}
+    ]
+  },
+  {
+    "id": "q10",
+    "scenario": "What kind of team would you like to join?",
+    "options": [
+      {"id":"a","label":"A team creating a new product","weights":{"fullstack_swe":4,"product_ux_swe":3,"mobile_swe":2}},
+      {"id":"b","label":"A team working with data and AI","weights":{"data_swe":4,"ai_ml_swe":4}},
+      {"id":"c","label":"A team keeping systems fast and online","weights":{"cloud_devops_swe":4,"systems_swe":3,"backend_swe":2}},
+      {"id":"d","label":"A team testing and protecting software","weights":{"qa_automation_swe":4,"cybersecurity_swe":4}}
+    ]
+  }
+]
