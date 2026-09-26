@@ -1,5 +1,7 @@
 import os
 import unittest
+from pathlib import Path
+from unittest.mock import patch
 
 os.environ["JOBWAY_ENABLE_UNSAFE_LOCAL_EXECUTION"] = "1"
 
@@ -10,7 +12,6 @@ from fastapi.testclient import TestClient
 class ApiTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        main.SESSION_STATES.clear()
         cls.client = TestClient(main.app)
 
     def test_recommendation_and_company_routes(self):
@@ -64,6 +65,24 @@ class ApiTests(unittest.TestCase):
         self.assertEqual(selected.status_code, 200)
         self.assertEqual(first.get("/api/workflow/active").json()["target_id"], "backend_swe")
         self.assertEqual(second.get("/api/workflow/active").json(), {"active_workflow": None})
+
+    def test_tampered_progress_cookie_is_rejected(self):
+        client = TestClient(main.app)
+        client.post("/api/workflow/select", json={"mode": "role", "target_id": "backend_swe"})
+        client.cookies.set(main.SESSION_COOKIE, "tampered.payload")
+        self.assertEqual(client.get("/api/workflow/active").json(), {"active_workflow": None})
+
+    def test_public_only_deployment_disables_private_execution(self):
+        missing_private_bank = Path("__jobway_missing_private_questions__.json")
+        with patch.object(main, "QUESTIONS_PATH", missing_private_bank):
+            questions = self.client.get("/api/questions")
+            self.assertEqual(questions.status_code, 200)
+            self.assertTrue(questions.json())
+            execution = self.client.post(
+                "/api/code/run",
+                json={"question_id": "lc-two-sum", "language": "python", "source_code": "print(1)"},
+            )
+            self.assertEqual(execution.status_code, 503)
 
 
 if __name__ == "__main__":

@@ -1,0 +1,73 @@
+name: Quality gates
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.14.0
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            frontend/package-lock.json
+      - run: npm ci
+      - run: npm ci --prefix frontend
+      - run: npm run lint
+      - run: npm run format:check
+      - run: npm run typecheck --prefix frontend
+      - run: npm test --prefix frontend
+      - run: npm run build --prefix frontend
+
+  backend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.14.0
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - run: npm ci --prefix backend
+      - run: npm run build --prefix backend
+      - run: npm test --prefix backend
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - run: pip install -r requirements.txt pytest
+      - run: pytest tests -q
+
+  executor:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.14.0
+          cache: npm
+          cache-dependency-path: executor/package-lock.json
+      - run: npm ci --prefix executor
+      - name: Run authenticated executor integration tests
+        working-directory: executor
+        env:
+          EXECUTOR_TOKEN: ci-only-executor-token-with-32-characters
+          PORT: 18080
+        run: |
+          node server.js &
+          server_pid=$!
+          trap 'kill $server_pid' EXIT
+          for attempt in {1..20}; do
+            curl --fail --silent http://127.0.0.1:18080/health && break
+            sleep 0.25
+          done
+          npm test

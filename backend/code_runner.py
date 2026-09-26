@@ -57,7 +57,7 @@ def run_user_code(question: dict[str, Any], language: str, source_code: str, mod
         supplied = {word.lower().strip(".,:;()") for word in source_code.split()}
         points = question.get("key_points") or question.get("topics") or []
         matched = [point for point in points if any(token in supplied for token in str(point).lower().split())]
-        return {"mode": mode, "conceptual": True, "all_passed": len(matched) >= max(1, len(points) // 2), "matched_key_points": matched, "expected_key_points": points, "results": []}
+        return {"mode": mode, "conceptual": True, "all_passed": len(matched) >= max(1, len(points) // 2), "matched_key_points": matched, "results": []}
     cases = list(question.get("test_cases") or question.get("testCases") or [])
     limit = 3 if mode == "run" else 10
     selected = cases[:limit]

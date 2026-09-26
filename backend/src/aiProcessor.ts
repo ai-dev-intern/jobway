@@ -1,25 +1,36 @@
-import { PrismaClient } from '@prisma/client';
-import { Groq } from 'groq-sdk';
-import { computeTextEmbedding, calculateCosineSimilarity } from './embeddingService.js';
-import dotenv from 'dotenv';
+import { PrismaClient } from "@prisma/client";
+import { Groq } from "groq-sdk";
+import {
+  computeTextEmbedding,
+  calculateCosineSimilarity,
+} from "./embeddingService.js";
+import dotenv from "dotenv";
 dotenv.config();
 
 const prisma = new PrismaClient();
 
-const EXECUTOR_URL = process.env.EXECUTOR_URL || 'http://localhost:8080';
-const EXECUTOR_TOKEN = (process.env.EXECUTOR_TOKEN || '').trim();
-const PRIMARY_MODEL = process.env.GROQ_MODEL || 'openai/gpt-oss-120b';
+const EXECUTOR_URL = process.env.EXECUTOR_URL || "http://localhost:8080";
+const EXECUTOR_TOKEN = (process.env.EXECUTOR_TOKEN || "").trim();
+const PRIMARY_MODEL = process.env.GROQ_MODEL || "openai/gpt-oss-120b";
 
-async function createChatCompletion(groq: Groq, options: { messages: any[]; temperature?: number; response_format?: any; max_tokens?: number }) {
+async function createChatCompletion(
+  groq: Groq,
+  options: {
+    messages: any[];
+    temperature?: number;
+    response_format?: any;
+    max_tokens?: number;
+  },
+) {
   const candidateModels = [
     PRIMARY_MODEL,
-    'openai/gpt-oss-120b',
-    'openai/gpt-oss-20b',
-    'groq/compound-mini',
-    'qwen/qwen3.8-27b',
-    'qwen/qwen3.6-27b',
-    'llama-3.1-8b-instant',
-    'llama-3.3-70b-versatile',
+    "openai/gpt-oss-120b",
+    "openai/gpt-oss-20b",
+    "groq/compound-mini",
+    "qwen/qwen3.8-27b",
+    "qwen/qwen3.6-27b",
+    "llama-3.1-8b-instant",
+    "llama-3.3-70b-versatile",
   ];
   const models = [...new Set(candidateModels.filter(Boolean))] as string[];
 
@@ -30,7 +41,9 @@ async function createChatCompletion(groq: Groq, options: { messages: any[]; temp
   let lastError: any;
   for (const model of models) {
     try {
-      console.log(`[Pipeline] Attempting Groq completion with model '${model}'...`);
+      console.log(
+        `[Pipeline] Attempting Groq completion with model '${model}'...`,
+      );
       return await groq.chat.completions.create({
         max_tokens: options.max_tokens || 2048,
         ...safeOptions,
@@ -38,7 +51,9 @@ async function createChatCompletion(groq: Groq, options: { messages: any[]; temp
       });
     } catch (err: any) {
       lastError = err;
-      console.warn(`[Pipeline] Model '${model}' failed (${err.status || err.name}: ${err.message}). Trying next candidate...`);
+      console.warn(
+        `[Pipeline] Model '${model}' failed (${err.status || err.name}: ${err.message}). Trying next candidate...`,
+      );
       continue;
     }
   }
@@ -48,7 +63,7 @@ async function createChatCompletion(groq: Groq, options: { messages: any[]; temp
 export async function processQuestionInBackground(stagedQuestionId: string) {
   try {
     const stagedQuestion = await prisma.stagedQuestion.findUnique({
-      where: { id: stagedQuestionId }
+      where: { id: stagedQuestionId },
     });
 
     if (!stagedQuestion) {
@@ -56,24 +71,29 @@ export async function processQuestionInBackground(stagedQuestionId: string) {
       return;
     }
 
-    let groq_api_key = (process.env.GROQ_API_KEY || '').trim();
+    let groq_api_key = (process.env.GROQ_API_KEY || "").trim();
     if (!groq_api_key) {
       try {
-        const envParsed = dotenv.config({ path: '/app/.env' }).parsed 
-          || dotenv.config({ path: '../.env' }).parsed 
-          || dotenv.config().parsed;
-        groq_api_key = (envParsed?.GROQ_API_KEY || '').trim();
+        const envParsed =
+          dotenv.config({ path: "/app/.env" }).parsed ||
+          dotenv.config({ path: "../.env" }).parsed ||
+          dotenv.config().parsed;
+        groq_api_key = (envParsed?.GROQ_API_KEY || "").trim();
       } catch {}
     }
-    groq_api_key = groq_api_key.replace(/^["']|["']$/g, '').trim();
+    groq_api_key = groq_api_key.replace(/^["']|["']$/g, "").trim();
 
-    console.log(`[Pipeline] Starting pipeline for ${stagedQuestionId}. API key configured: ${Boolean(groq_api_key)}`);
+    console.log(
+      `[Pipeline] Starting pipeline for ${stagedQuestionId}. API key configured: ${Boolean(groq_api_key)}`,
+    );
 
     if (!groq_api_key) {
-      console.error('[Pipeline] GROQ_API_KEY is missing or empty. Cannot process question.');
+      console.error(
+        "[Pipeline] GROQ_API_KEY is missing or empty. Cannot process question.",
+      );
       await prisma.stagedQuestion.update({
         where: { id: stagedQuestionId },
-        data: { status: 'FAILED_AI' }
+        data: { status: "FAILED_AI" },
       });
       return;
     }
@@ -83,7 +103,9 @@ export async function processQuestionInBackground(stagedQuestionId: string) {
     // =========================================================================
     // STEP 1: LLM Formalization & Algorithmic Strategy Extraction
     // =========================================================================
-    console.log(`[Pipeline] Step 1: Formalizing raw question ${stagedQuestionId} via Groq...`);
+    console.log(
+      `[Pipeline] Step 1: Formalizing raw question ${stagedQuestionId} via Groq...`,
+    );
 
     const formalizePrompt = `You are a premier competitive programming problem curator.
 Analyze the following raw interview question and extract its formal components.
@@ -105,47 +127,60 @@ Output a valid JSON object matching this structure EXACTLY (no markdown, no back
       temperature: 0.1,
     });
 
-    const parsedMeta = parseJsonResponse(formalizeCompletion.choices[0].message.content || "{}");
+    const parsedMeta = parseJsonResponse(
+      formalizeCompletion.choices[0].message.content || "{}",
+    );
 
     // =========================================================================
     // STEP 2: 384-d Vector Embedding & Cosine Similarity Deduplication
     // =========================================================================
-    console.log(`[Pipeline] Step 2: Computing 384-d embedding and checking for duplicates...`);
-    const questionText = `${parsedMeta.title || ''} ${parsedMeta.description || ''}`;
+    console.log(
+      `[Pipeline] Step 2: Computing 384-d embedding and checking for duplicates...`,
+    );
+    const questionText = `${parsedMeta.title || ""} ${parsedMeta.description || ""}`;
     const newEmbedding = computeTextEmbedding(questionText);
 
     try {
       const existingQuestions = await prisma.question.findMany({
-        select: { id: true, title: true, description: true }
+        select: { id: true, title: true, description: true },
       });
 
       for (const existing of existingQuestions) {
-        const existingVec = computeTextEmbedding(`${existing.title} ${existing.description}`);
+        const existingVec = computeTextEmbedding(
+          `${existing.title} ${existing.description}`,
+        );
         const similarity = calculateCosineSimilarity(newEmbedding, existingVec);
 
         if (similarity >= 0.85) {
-          console.warn(`[Pipeline] Duplicate detected with Question ${existing.id} (Similarity: ${(similarity * 100).toFixed(1)}%). Halting.`);
+          console.warn(
+            `[Pipeline] Duplicate detected with Question ${existing.id} (Similarity: ${(similarity * 100).toFixed(1)}%). Halting.`,
+          );
           await prisma.stagedQuestion.update({
             where: { id: stagedQuestionId },
             data: {
-              title: parsedMeta.title || 'Duplicate Question',
+              title: parsedMeta.title || "Duplicate Question",
               description: parsedMeta.description || stagedQuestion.rawText,
-              category: parsedMeta.category || 'General',
-              subtopic: parsedMeta.subtopic || 'General',
-              status: 'DUPLICATE_FOUND'
-            }
+              category: parsedMeta.category || "General",
+              subtopic: parsedMeta.subtopic || "General",
+              status: "DUPLICATE_FOUND",
+            },
           });
           return;
         }
       }
     } catch (dedupError) {
-      console.warn('[Pipeline] Deduplication check skipped or error:', dedupError);
+      console.warn(
+        "[Pipeline] Deduplication check skipped or error:",
+        dedupError,
+      );
     }
 
     // =========================================================================
     // STEP 3: Solution Synthesizer & 10 Standardized I/O Test Cases
     // =========================================================================
-    console.log(`[Pipeline] Step 3: Synthesizing canonical solution & 10 test cases via Groq...`);
+    console.log(
+      `[Pipeline] Step 3: Synthesizing canonical solution & 10 test cases via Groq...`,
+    );
 
     const synthesisPrompt = `You are an expert algorithmic problem creator.
 Given this problem:
@@ -183,9 +218,14 @@ Output ONLY a JSON object matching this structure:
     let synthAttempts = 0;
     const maxSynthAttempts = 2;
 
-    while (synthAttempts < maxSynthAttempts && (!solutionCode || testCases.length < 10)) {
+    while (
+      synthAttempts < maxSynthAttempts &&
+      (!solutionCode || testCases.length < 10)
+    ) {
       synthAttempts++;
-      console.log(`[Pipeline] Step 3 (Attempt ${synthAttempts}/${maxSynthAttempts}): Synthesizing solution & 10 test cases via Groq...`);
+      console.log(
+        `[Pipeline] Step 3 (Attempt ${synthAttempts}/${maxSynthAttempts}): Synthesizing solution & 10 test cases via Groq...`,
+      );
 
       const synthesisCompletion = await createChatCompletion(groq, {
         messages: [{ role: "user", content: synthesisPrompt }],
@@ -193,28 +233,38 @@ Output ONLY a JSON object matching this structure:
         temperature: 0.1,
       });
 
-      const synthData = parseJsonResponse(synthesisCompletion.choices[0].message.content || "{}");
+      const synthData = parseJsonResponse(
+        synthesisCompletion.choices[0].message.content || "{}",
+      );
       solutionCode = synthData.solutionCode || "";
-      const rawCases = Array.isArray(synthData.testCases) ? synthData.testCases : [];
+      const rawCases = Array.isArray(synthData.testCases)
+        ? synthData.testCases
+        : [];
       testCases = rawCases
         .map((tc: any) => ({
-          input: typeof tc.input === 'string' ? tc.input : String(tc.input ?? ''),
-          expectedOutput: typeof tc.expectedOutput === 'string' 
-            ? tc.expectedOutput 
-            : typeof tc.output === 'string' 
-              ? tc.output 
-              : String(tc.expectedOutput ?? tc.output ?? '')
+          input:
+            typeof tc.input === "string" ? tc.input : String(tc.input ?? ""),
+          expectedOutput:
+            typeof tc.expectedOutput === "string"
+              ? tc.expectedOutput
+              : typeof tc.output === "string"
+                ? tc.output
+                : String(tc.expectedOutput ?? tc.output ?? ""),
         }))
         .filter((tc: any) => tc.input.trim().length > 0);
 
       if (!solutionCode || testCases.length < 10) {
-        console.warn(`[Pipeline] Synthesis attempt ${synthAttempts} had ${testCases.length}/10 test cases.`);
+        console.warn(
+          `[Pipeline] Synthesis attempt ${synthAttempts} had ${testCases.length}/10 test cases.`,
+        );
       }
     }
 
     // Secondary expansion if LLM provided fewer than 10 test cases
     if (solutionCode && testCases.length > 0 && testCases.length < 10) {
-      console.log(`[Pipeline] Synthesizing ${10 - testCases.length} additional test cases to ensure full 10/10 suite...`);
+      console.log(
+        `[Pipeline] Synthesizing ${10 - testCases.length} additional test cases to ensure full 10/10 suite...`,
+      );
       try {
         const morePrompt = `Problem: ${parsedMeta.title}
 ${parsedMeta.description}
@@ -235,30 +285,41 @@ Output ONLY JSON:
           response_format: { type: "json_object" },
           temperature: 0.2,
         });
-        const moreData = parseJsonResponse(moreCompletion.choices[0].message.content || "{}");
+        const moreData = parseJsonResponse(
+          moreCompletion.choices[0].message.content || "{}",
+        );
         if (Array.isArray(moreData.testCases)) {
           const additional = moreData.testCases
             .map((tc: any) => ({
-              input: typeof tc.input === 'string' ? tc.input : String(tc.input ?? ''),
-              expectedOutput: typeof tc.expectedOutput === 'string' 
-                ? tc.expectedOutput 
-                : typeof tc.output === 'string' 
-                  ? tc.output 
-                  : String(tc.expectedOutput ?? tc.output ?? '')
+              input:
+                typeof tc.input === "string"
+                  ? tc.input
+                  : String(tc.input ?? ""),
+              expectedOutput:
+                typeof tc.expectedOutput === "string"
+                  ? tc.expectedOutput
+                  : typeof tc.output === "string"
+                    ? tc.output
+                    : String(tc.expectedOutput ?? tc.output ?? ""),
             }))
             .filter((tc: any) => tc.input.trim().length > 0);
           testCases = [...testCases, ...additional].slice(0, 10);
         }
       } catch (moreErr) {
-        console.warn('[Pipeline] Additional test case synthesis skipped:', moreErr);
+        console.warn(
+          "[Pipeline] Additional test case synthesis skipped:",
+          moreErr,
+        );
       }
     }
 
     if (!solutionCode || testCases.length === 0) {
-      console.error(`[Pipeline] LLM failed to synthesize valid solution or test cases.`);
+      console.error(
+        `[Pipeline] LLM failed to synthesize valid solution or test cases.`,
+      );
       await prisma.stagedQuestion.update({
         where: { id: stagedQuestionId },
-        data: { status: 'FAILED_AI' }
+        data: { status: "FAILED_AI" },
       });
       return;
     }
@@ -266,7 +327,9 @@ Output ONLY JSON:
     // =========================================================================
     // STEP 4: Docker Sandbox Execution & Self-Correction Healing Loop
     // =========================================================================
-    console.log(`[Pipeline] Step 4: Testing solution against ${testCases.length} test cases in sandbox...`);
+    console.log(
+      `[Pipeline] Step 4: Testing solution against ${testCases.length} test cases in sandbox...`,
+    );
     let validationPassed = false;
     let retryCount = 0;
     const maxRetries = 2;
@@ -274,38 +337,52 @@ Output ONLY JSON:
     while (retryCount <= maxRetries) {
       try {
         const valRes = await fetch(`${EXECUTOR_URL}/validate`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${EXECUTOR_TOKEN}` },
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${EXECUTOR_TOKEN}`,
+          },
           body: JSON.stringify({
-            language: 'python',
+            language: "python",
             code: solutionCode,
-            testCases: testCases.map(tc => ({
+            testCases: testCases.map((tc) => ({
               input: tc.input,
-              expectedOutput: tc.expectedOutput
-            }))
-          })
+              expectedOutput: tc.expectedOutput,
+            })),
+          }),
         });
 
         const valData = await valRes.json();
 
         if (valData.allPassed) {
           validationPassed = true;
-          console.log(`[Pipeline] Sandbox Validation Passed (10/10 Verified) in ${valData.totalDurationMs}ms!`);
+          console.log(
+            `[Pipeline] Sandbox Validation Passed (10/10 Verified) in ${valData.totalDurationMs}ms!`,
+          );
           break;
         }
 
         // Check if all test cases executed cleanly without compilation, runtime, or timeout errors
-        const hasFatalExecutionErrors = valData.stage === 'compilation' || valData.results?.some((r: any) => r.error);
+        const hasFatalExecutionErrors =
+          valData.stage === "compilation" ||
+          valData.results?.some((r: any) => r.error);
 
-        if (!hasFatalExecutionErrors && valData.results && valData.results.length === testCases.length && testCases.length > 0) {
+        if (
+          !hasFatalExecutionErrors &&
+          valData.results &&
+          valData.results.length === testCases.length &&
+          testCases.length > 0
+        ) {
           // The Python reference solution executed cleanly on every input.
           // Calibrate ground-truth expected outputs directly from the verified sandbox run:
           testCases = testCases.map((tc: any, idx: number) => ({
             ...tc,
-            expectedOutput: valData.results[idx].actualOutput
+            expectedOutput: valData.results[idx].actualOutput,
           }));
 
-          console.log(`[Pipeline] Calibrated ${testCases.length}/10 ground-truth outputs against canonical sandbox solver. Verification successful!`);
+          console.log(
+            `[Pipeline] Calibrated ${testCases.length}/10 ground-truth outputs against canonical sandbox solver. Verification successful!`,
+          );
           validationPassed = true;
           break;
         }
@@ -313,16 +390,18 @@ Output ONLY JSON:
         // Self-Healing Retry Loop
         retryCount++;
         if (retryCount <= maxRetries) {
-          console.warn(`[Pipeline] Sandbox validation failed on attempt ${retryCount}. Triggering AI Self-Correction...`);
+          console.warn(
+            `[Pipeline] Sandbox validation failed on attempt ${retryCount}. Triggering AI Self-Correction...`,
+          );
           const failedCase = valData.results?.find((r: any) => !r.passed) || {};
-          
+
           const healPrompt = `The synthesized Python 3 solution failed during sandbox verification.
 Error Details:
-Stage: ${valData.stage || 'execution'}
-Error: ${failedCase.error || valData.error || 'Output mismatch'}
-Failed Test Input: "${failedCase.input || ''}"
-Actual Output: "${failedCase.actualOutput || ''}"
-Expected Output: "${failedCase.expectedOutput || ''}"
+Stage: ${valData.stage || "execution"}
+Error: ${failedCase.error || valData.error || "Output mismatch"}
+Failed Test Input: "${failedCase.input || ""}"
+Actual Output: "${failedCase.actualOutput || ""}"
+Expected Output: "${failedCase.expectedOutput || ""}"
 
 Current Solution Code:
 ${solutionCode}
@@ -335,12 +414,18 @@ Output ONLY JSON with the fixed "solutionCode" and "testCases" array.`;
             temperature: 0.1,
           });
 
-          const healed = parseJsonResponse(healCompletion.choices[0].message.content || "{}");
+          const healed = parseJsonResponse(
+            healCompletion.choices[0].message.content || "{}",
+          );
           if (healed.solutionCode) solutionCode = healed.solutionCode;
-          if (healed.testCases && healed.testCases.length > 0) testCases = healed.testCases;
+          if (healed.testCases && healed.testCases.length > 0)
+            testCases = healed.testCases;
         }
       } catch (sandboxConnError) {
-        console.warn(`[Pipeline] Sandbox connection error on attempt ${retryCount}:`, sandboxConnError);
+        console.warn(
+          `[Pipeline] Sandbox connection error on attempt ${retryCount}:`,
+          sandboxConnError,
+        );
         break;
       }
     }
@@ -348,50 +433,61 @@ Output ONLY JSON with the fixed "solutionCode" and "testCases" array.`;
     // =========================================================================
     // STEP 5: Staging Promotion
     // =========================================================================
-    const finalStatus = validationPassed ? 'STAGED' : 'FAILED_SANDBOX';
+    const finalStatus = validationPassed ? "STAGED" : "FAILED_SANDBOX";
 
     await prisma.stagedQuestion.update({
       where: { id: stagedQuestionId },
       data: {
-        title: parsedMeta.title || 'Untitled Question',
+        title: parsedMeta.title || "Untitled Question",
         description: parsedMeta.description || stagedQuestion.rawText,
-        category: parsedMeta.category || 'DSA',
-        subtopic: parsedMeta.subtopic || 'General',
-        constraints: parsedMeta.constraints || '',
+        category: parsedMeta.category || "DSA",
+        subtopic: parsedMeta.subtopic || "General",
+        constraints: parsedMeta.constraints || "",
         solutionCode: solutionCode,
-        solutionLang: 'python',
+        solutionLang: "python",
         testCases: testCases,
-        sandboxVerdict: validationPassed ? `${testCases.length}/${testCases.length} Passed` : 'Validation Failed',
-        status: finalStatus
-      }
+        sandboxVerdict: validationPassed
+          ? `${testCases.length}/${testCases.length} Passed`
+          : "Validation Failed",
+        status: finalStatus,
+      },
     });
 
-    console.log(`[Pipeline] Completed processing for StagedQuestion ${stagedQuestionId}. Status: ${finalStatus}`);
-
+    console.log(
+      `[Pipeline] Completed processing for StagedQuestion ${stagedQuestionId}. Status: ${finalStatus}`,
+    );
   } catch (error) {
-    console.error(`[Pipeline] Catastrophic failure for ${stagedQuestionId}:`, error);
-    await prisma.stagedQuestion.update({
-      where: { id: stagedQuestionId },
-      data: { status: 'FAILED_AI' }
-    }).catch(() => {});
+    console.error(
+      `[Pipeline] Catastrophic failure for ${stagedQuestionId}:`,
+      error,
+    );
+    await prisma.stagedQuestion
+      .update({
+        where: { id: stagedQuestionId },
+        data: { status: "FAILED_AI" },
+      })
+      .catch(() => {});
   }
 }
 
 function parseJsonResponse(raw: string): any {
-  if (!raw || typeof raw !== 'string') return {};
+  if (!raw || typeof raw !== "string") return {};
   let cleaned = raw.trim();
-  
+
   // Strip markdown code blocks
-  cleaned = cleaned.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
-  
+  cleaned = cleaned
+    .replace(/^```(?:json)?\s*/i, "")
+    .replace(/\s*```$/, "")
+    .trim();
+
   // Strategy 1: Direct parse
   try {
     return JSON.parse(cleaned);
   } catch {}
 
   // Strategy 2: Extract JSON object { ... }
-  const objectStart = cleaned.indexOf('{');
-  const objectEnd = cleaned.lastIndexOf('}');
+  const objectStart = cleaned.indexOf("{");
+  const objectEnd = cleaned.lastIndexOf("}");
   if (objectStart !== -1 && objectEnd !== -1 && objectEnd > objectStart) {
     const extracted = cleaned.substring(objectStart, objectEnd + 1);
     try {
@@ -401,31 +497,33 @@ function parseJsonResponse(raw: string): any {
     // Clean trailing commas and control characters from extracted object
     try {
       const fixed = extracted
-        .replace(/,\s*([}\]])/g, '$1')
-        .replace(/[\u0000-\u001F]+/g, (m) => m.includes('\n') ? '\\n' : ' ');
+        .replace(/,\s*([}\]])/g, "$1")
+        .replace(/[\u0000-\u001F]+/g, (m) => (m.includes("\n") ? "\\n" : " "));
       return JSON.parse(fixed);
     } catch {}
   }
-  
+
   // Strategy 3: Extract JSON array [ ... ]
-  const arrayStart = cleaned.indexOf('[');
-  const arrayEnd = cleaned.lastIndexOf(']');
+  const arrayStart = cleaned.indexOf("[");
+  const arrayEnd = cleaned.lastIndexOf("]");
   if (arrayStart !== -1 && arrayEnd !== -1 && arrayEnd > arrayStart) {
     try {
-      const extracted = cleaned.substring(arrayStart, arrayEnd + 1).replace(/,\s*([}\]])/g, '$1');
+      const extracted = cleaned
+        .substring(arrayStart, arrayEnd + 1)
+        .replace(/,\s*([}\]])/g, "$1");
       return JSON.parse(extracted);
     } catch {}
   }
-  
+
   // Strategy 4: Fix trailing commas and unquoted keys across whole string
   try {
     let fixedJson = cleaned
-      .replace(/,\s*([}\]])/g, '$1')
+      .replace(/,\s*([}\]])/g, "$1")
       .replace(/([{,]\s*)([a-zA-Z_][a-zA-Z0-9_]*)(\s*:)/g, '$1"$2"$3');
     return JSON.parse(fixedJson);
   } catch (e) {
-    console.error('[Pipeline] All JSON parsing strategies failed:', e);
+    console.error("[Pipeline] All JSON parsing strategies failed:", e);
   }
-  
+
   return {};
 }

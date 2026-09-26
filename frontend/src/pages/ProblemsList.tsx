@@ -1,10 +1,12 @@
-import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
-import axios from 'axios';
-import { CheckCircle2, Circle, AlertCircle } from 'lucide-react';
-import './ProblemsList.css';
+import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import axios from "axios";
+import { Circle, AlertCircle } from "lucide-react";
+import "./ProblemsList.css";
 
-const API_BASE = import.meta.env.VITE_API_BASE || (import.meta.env.DEV ? 'http://127.0.0.1:3000' : '');
+const API_BASE =
+  import.meta.env.VITE_API_BASE ||
+  (import.meta.env.DEV ? "http://127.0.0.1:3000" : "");
 
 interface Question {
   id: string;
@@ -17,7 +19,7 @@ interface Question {
 export default function ProblemsList() {
   const [questions, setQuestions] = useState<Question[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
 
   useEffect(() => {
     const fetchQuestions = async () => {
@@ -26,9 +28,8 @@ export default function ProblemsList() {
         if (response.data.success) {
           setQuestions(response.data.data);
         }
-      } catch (err: any) {
-        setError('Failed to fetch questions. Is the backend running?');
-        console.error(err);
+      } catch {
+        setError("Failed to fetch questions. Is the backend running?");
       } finally {
         setLoading(false);
       }
@@ -42,7 +43,9 @@ export default function ProblemsList() {
       <div className="problems-header flex-between">
         <div>
           <h1 className="page-title text-gradient">Problem Set</h1>
-          <p className="page-subtitle">Sharpen your skills with our collection of coding challenges.</p>
+          <p className="page-subtitle">
+            Sharpen your skills with our collection of coding challenges.
+          </p>
         </div>
       </div>
 
@@ -84,7 +87,10 @@ export default function ProblemsList() {
                       {/* Would replace with CheckCircle2 if solved */}
                     </td>
                     <td>
-                      <Link to={`/problems/${q.id}`} className="problem-title-link">
+                      <Link
+                        to={`/problems/${q.id}`}
+                        className="problem-title-link"
+                      >
                         {q.title}
                       </Link>
                     </td>
@@ -92,7 +98,8 @@ export default function ProblemsList() {
                       <span className="category-tag">{q.category}</span>
                     </td>
                     <td>
-                      <span className="difficulty-tag medium">Medium</span> {/* Mock difficulty for now since it's not in schema */}
+                      <span className="difficulty-tag medium">Medium</span>{" "}
+                      {/* Mock difficulty for now since it's not in schema */}
                     </td>
                   </tr>
                 ))

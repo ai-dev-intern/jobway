@@ -97,6 +97,8 @@ out
 .idea/
 .vscode/*
 !.vscode/extensions.json
+.vercel/
+.deploy/
 *.suo
 *.ntvs*
 *.njsproj
@@ -133,3 +135,5 @@ executor/temp/
 
 # Pytest
 .pytest_cache/
+
+.vercel

@@ -1,14 +1,17 @@
 """Offline-first FastAPI service for the Job Way career preparation MVP."""
 from __future__ import annotations
 
+import base64
+import hashlib
+import hmac
 import json
 import os
-import re
 import secrets
 import threading
 import time
-from copy import deepcopy
 from collections import defaultdict, deque
+from contextlib import asynccontextmanager
+from copy import deepcopy
 from pathlib import Path
 from typing import Any, Literal
 
@@ -29,6 +32,7 @@ from .workflow_engine import (
 
 ROOT = Path(__file__).resolve().parents[1]
 QUESTIONS_PATH = ROOT / "backend" / "questions.private.json"
+PUBLIC_QUESTIONS_PATH = ROOT / "frontend" / "public" / "questions.json"
 COMPANIES_PATH = ROOT / "frontend" / "public" / "company_profiles.json"
 OVERRIDES_PATH = ROOT / "backend" / "admin_overrides.json"
 DEFAULT_STATE = {"active_workflow": None, "solved_questions": [], "opted_out_questions": {}, "swaps": {}, "swapped_in_questions": []}
@@ -37,11 +41,19 @@ IS_PRODUCTION = os.getenv("JOBWAY_ENV", "development").lower() == "production"
 cors_origins = [value.strip() for value in os.getenv("JOBWAY_CORS_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173").split(",") if value.strip()]
 trusted_hosts = [value.strip() for value in os.getenv("JOBWAY_TRUSTED_HOSTS", "localhost,127.0.0.1,testserver").split(",") if value.strip()]
 
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    if os.getenv("JOBWAY_ENABLE_PIPELINE_SCHEDULER") == "1":
+        threading.Thread(target=_pipeline_scheduler, daemon=True, name="jobway-pipeline").start()
+    yield
+
+
 app = FastAPI(
     title="Job Way Career Portal", version="1.0.0",
     docs_url=None if IS_PRODUCTION else "/docs",
     redoc_url=None if IS_PRODUCTION else "/redoc",
     openapi_url=None if IS_PRODUCTION else "/openapi.json",
+    lifespan=lifespan,
 )
 app.add_middleware(TrustedHostMiddleware, allowed_hosts=trusted_hosts)
 app.add_middleware(
@@ -52,10 +64,34 @@ app.add_middleware(
 REQUEST_LIMIT = 128 * 1024
 RATE_WINDOWS: dict[str, deque[float]] = defaultdict(deque)
 RATE_LOCK = threading.Lock()
-SESSION_STATES: dict[str, tuple[float, dict[str, Any]]] = {}
-SESSION_LOCK = threading.Lock()
 SESSION_COOKIE = "jobway_session"
-MAX_ANONYMOUS_SESSIONS = 1000
+configured_session_secret = os.getenv("JOBWAY_SESSION_SECRET", "").encode("utf-8")
+if IS_PRODUCTION and len(configured_session_secret) < 32:
+    raise RuntimeError("JOBWAY_SESSION_SECRET must contain at least 32 characters in production")
+SESSION_SECRET = configured_session_secret or secrets.token_bytes(32)
+MAX_SESSION_COOKIE_BYTES = 3800
+
+
+def _encode_session(value: dict[str, Any]) -> str:
+    raw = json.dumps(value, separators=(",", ":"), sort_keys=True).encode("utf-8")
+    payload = base64.urlsafe_b64encode(raw).rstrip(b"=")
+    signature = hmac.new(SESSION_SECRET, payload, hashlib.sha256).hexdigest().encode("ascii")
+    return b".".join((payload, signature)).decode("ascii")
+
+
+def _decode_session(value: str) -> dict[str, Any]:
+    try:
+        payload, supplied_signature = value.encode("ascii").rsplit(b".", 1)
+        expected_signature = hmac.new(SESSION_SECRET, payload, hashlib.sha256).hexdigest().encode("ascii")
+        if not hmac.compare_digest(supplied_signature, expected_signature):
+            return deepcopy(DEFAULT_STATE)
+        padding = b"=" * (-len(payload) % 4)
+        decoded = json.loads(base64.urlsafe_b64decode(payload + padding))
+        if not isinstance(decoded, dict):
+            return deepcopy(DEFAULT_STATE)
+        return {**deepcopy(DEFAULT_STATE), **decoded}
+    except (ValueError, UnicodeError, json.JSONDecodeError):
+        return deepcopy(DEFAULT_STATE)
 
 
 @app.middleware("http")
@@ -79,13 +115,11 @@ async def security_boundary(request: Request, call_next):
             if len(window) >= limit:
                 return JSONResponse({"detail": "Too many requests; retry shortly"}, status_code=429, headers={"Retry-After": "60"})
             window.append(now)
-    session_id = request.cookies.get(SESSION_COOKIE, "")
-    if not re.fullmatch(r"[a-f0-9]{64}", session_id):
-        session_id = secrets.token_hex(32)
-    request.state.session_id = session_id
+    request.state.session_state = _decode_session(request.cookies.get(SESSION_COOKIE, ""))
     response = await call_next(request)
+    encoded_session = _encode_session(request.state.session_state)
     response.set_cookie(
-        SESSION_COOKIE, session_id, max_age=30 * 24 * 60 * 60,
+        SESSION_COOKIE, encoded_session, max_age=30 * 24 * 60 * 60,
         httponly=True, secure=IS_PRODUCTION, samesite="lax", path="/",
     )
     response.headers["X-Content-Type-Options"] = "nosniff"
@@ -99,7 +133,7 @@ async def security_boundary(request: Request, call_next):
 
 
 def _question_records() -> list[dict[str, Any]]:
-    values = read_json(QUESTIONS_PATH, [])
+    values = read_json(QUESTIONS_PATH if QUESTIONS_PATH.exists() else PUBLIC_QUESTIONS_PATH, [])
     overrides = read_json(OVERRIDES_PATH, {})
     by_id = overrides.get("questions", overrides) if isinstance(overrides, dict) else {}
     return [{**item, **(by_id.get(str(item.get("id")), {}) if isinstance(by_id, dict) else {})} for item in values]
@@ -138,22 +172,13 @@ def companies() -> dict[str, dict[str, Any]]:
 
 
 def state(request: Request) -> dict[str, Any]:
-    session_id = request.state.session_id
-    now = time.monotonic()
-    with SESSION_LOCK:
-        record = SESSION_STATES.get(session_id)
-        value = deepcopy(DEFAULT_STATE) if record is None else {**deepcopy(DEFAULT_STATE), **deepcopy(record[1])}
-        SESSION_STATES[session_id] = (now, deepcopy(value))
-    return value
+    return deepcopy(request.state.session_state)
 
 
 def save_state(request: Request, value: dict[str, Any]) -> dict[str, Any]:
-    session_id = request.state.session_id
-    with SESSION_LOCK:
-        if session_id not in SESSION_STATES and len(SESSION_STATES) >= MAX_ANONYMOUS_SESSIONS:
-            oldest = min(SESSION_STATES, key=lambda key: SESSION_STATES[key][0])
-            SESSION_STATES.pop(oldest, None)
-        SESSION_STATES[session_id] = (time.monotonic(), deepcopy(value))
+    if len(_encode_session(value).encode("ascii")) > MAX_SESSION_COOKIE_BYTES:
+        raise HTTPException(413, "Progress state is too large")
+    request.state.session_state = deepcopy(value)
     return value
 
 
@@ -237,12 +262,6 @@ def _pipeline_scheduler() -> None:
         except Exception:
             # Offline operation is expected; the last verified JSON snapshot remains active.
             continue
-
-
-@app.on_event("startup")
-def start_background_pipeline() -> None:
-    if os.getenv("JOBWAY_ENABLE_PIPELINE_SCHEDULER") == "1":
-        threading.Thread(target=_pipeline_scheduler, daemon=True, name="jobway-pipeline").start()
 
 
 @app.get("/api/questions")
@@ -370,6 +389,8 @@ def workflow_swap(body: SwapBody, request: Request) -> dict[str, Any]:
 
 
 def _execute(body: CodeBody, mode: str, request: Request) -> dict[str, Any]:
+    if not QUESTIONS_PATH.exists():
+        raise HTTPException(503, "Private test execution is not configured for this deployment")
     question = find_question(body.question_id, include_private=True)
     result = run_user_code(question, body.language, body.source_code, mode)
     if mode == "submit" and result.get("all_passed"):

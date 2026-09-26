@@ -1,37 +1,39 @@
 export interface MoodleQuestionData {
-    id: string;
-    title: string;
-    description: string;
-    category?: string;
-    subtopic?: string;
-    difficulty?: string;
-    solutionCode?: string;
-    testCases?: Array<{
-        input: string;
-        expectedOutput: string;
-    }>;
+  id: string;
+  title: string;
+  description: string;
+  category?: string;
+  subtopic?: string;
+  difficulty?: string;
+  solutionCode?: string;
+  testCases?: Array<{
+    input: string;
+    expectedOutput: string;
+  }>;
 }
 
-export function buildMoodleCodeRunnerXml(questions: MoodleQuestionData[]): string {
-    let xml = '<?xml version="1.0" encoding="UTF-8"?>\n<quiz>\n';
+export function buildMoodleCodeRunnerXml(
+  questions: MoodleQuestionData[],
+): string {
+  let xml = '<?xml version="1.0" encoding="UTF-8"?>\n<quiz>\n';
 
-    // Group questions by category/taxonomy path to generate category headers
-    const categoryGroups = new Map<string, MoodleQuestionData[]>();
+  // Group questions by category/taxonomy path to generate category headers
+  const categoryGroups = new Map<string, MoodleQuestionData[]>();
 
-    for (const q of questions) {
-        const cat = q.category || 'General';
-        const sub = q.subtopic || 'General';
-        const taxPath = `$course$/top/${cat}/${sub}`;
+  for (const q of questions) {
+    const cat = q.category || "General";
+    const sub = q.subtopic || "General";
+    const taxPath = `$course$/top/${cat}/${sub}`;
 
-        if (!categoryGroups.has(taxPath)) {
-            categoryGroups.set(taxPath, []);
-        }
-        categoryGroups.get(taxPath)!.push(q);
+    if (!categoryGroups.has(taxPath)) {
+      categoryGroups.set(taxPath, []);
     }
+    categoryGroups.get(taxPath)!.push(q);
+  }
 
-    // Output category blocks
-    for (const [taxPath, group] of categoryGroups.entries()) {
-        xml += `
+  // Output category blocks
+  for (const [taxPath, group] of categoryGroups.entries()) {
+    xml += `
   <!-- ========================================= -->
   <!-- Category: ${taxPath} -->
   <!-- ========================================= -->
@@ -45,17 +47,22 @@ export function buildMoodleCodeRunnerXml(questions: MoodleQuestionData[]): strin
   </question>
 `;
 
-        for (const q of group) {
-            let testcasesXml = '';
-            const testCases = q.testCases || [];
+    for (const q of group) {
+      let testcasesXml = "";
+      const testCases = q.testCases || [];
 
-            testCases.forEach((tc, idx) => {
-                const inputStr = typeof tc.input === 'string' ? tc.input : JSON.stringify(tc.input);
-                const outputStr = (typeof tc.expectedOutput === 'string' ? tc.expectedOutput : JSON.stringify(tc.expectedOutput)).trim();
-                const isSample = idx < 3; // First 3 are sample cases visible to students
+      testCases.forEach((tc, idx) => {
+        const inputStr =
+          typeof tc.input === "string" ? tc.input : JSON.stringify(tc.input);
+        const outputStr = (
+          typeof tc.expectedOutput === "string"
+            ? tc.expectedOutput
+            : JSON.stringify(tc.expectedOutput)
+        ).trim();
+        const isSample = idx < 3; // First 3 are sample cases visible to students
 
-                testcasesXml += `
-      <testcase testtype="0" useasexample="${isSample ? '1' : '0'}" hiderestiffail="0" mark="1.0000000">
+        testcasesXml += `
+      <testcase testtype="0" useasexample="${isSample ? "1" : "0"}" hiderestiffail="0" mark="1.0000000">
         <testcode>
           <text><![CDATA[${inputStr}]]></text>
         </testcode>
@@ -63,14 +70,16 @@ export function buildMoodleCodeRunnerXml(questions: MoodleQuestionData[]): strin
           <text><![CDATA[${outputStr}]]></text>
         </expected>
       </testcase>`;
-            });
+      });
 
-            const answerBlock = q.solutionCode ? `
+      const answerBlock = q.solutionCode
+        ? `
     <answer>
       <text><![CDATA[${q.solutionCode}]]></text>
-    </answer>` : '';
+    </answer>`
+        : "";
 
-            xml += `
+      xml += `
   <question type="coderunner">
     <name>
       <text><![CDATA[${q.title}]]></text>
@@ -79,7 +88,7 @@ export function buildMoodleCodeRunnerXml(questions: MoodleQuestionData[]): strin
       <text><![CDATA[${q.description}]]></text>
     </questiontext>
     <generalfeedback format="html">
-      <text><![CDATA[Difficulty: ${q.difficulty || 'Medium'} | Category: ${q.category || 'General'}]]></text>
+      <text><![CDATA[Difficulty: ${q.difficulty || "Medium"} | Category: ${q.category || "General"}]]></text>
     </generalfeedback>
     <defaultgrade>${Math.max(1, testCases.length)}.0000000</defaultgrade>
     <penalty>0.1000000</penalty>
@@ -93,22 +102,28 @@ ${testcasesXml}
     </testcases>
   </question>
 `;
-        }
     }
+  }
 
-    xml += '</quiz>\n';
-    return xml;
+  xml += "</quiz>\n";
+  return xml;
 }
 
 function escapeXml(unsafe: string): string {
-    return unsafe.replace(/[<>&'"]/g, (c) => {
-        switch (c) {
-            case '<': return '&lt;';
-            case '>': return '&gt;';
-            case '&': return '&amp;';
-            case '\'': return '&apos;';
-            case '"': return '&quot;';
-            default: return c;
-        }
-    });
+  return unsafe.replace(/[<>&'"]/g, (c) => {
+    switch (c) {
+      case "<":
+        return "&lt;";
+      case ">":
+        return "&gt;";
+      case "&":
+        return "&amp;";
+      case "'":
+        return "&apos;";
+      case '"':
+        return "&quot;";
+      default:
+        return c;
+    }
+  });
 }

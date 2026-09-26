@@ -1,7 +1,6 @@
-# The Vercel project is a public static frontend deployment only.
-backend/
+# Root-level Vercel uploads are for the Python placement API. The public
+# frontend is deployed separately from frontend/.
 executor/
-pipeline/
 scraper/
 tests/
 e2e/
@@ -13,3 +12,15 @@ docs/
 .env*
 docker-compose.yml
 MASTER_BUILD_PROMPT.md
+frontend/src/
+frontend/dist/
+frontend/node_modules/
+frontend/scripts/
+frontend/Dockerfile
+frontend/package*.json
+backend/node_modules/
+backend/dist/
+backend/Dockerfile
+backend/package*.json
+backend/questions.private.json
+backend/admin_overrides.json

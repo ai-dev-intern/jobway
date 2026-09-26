@@ -4,6 +4,10 @@
   "description": "Job Way is a guided career-discovery and interview-preparation platform.",
   "main": "index.js",
   "scripts": {
+    "lint": "eslint frontend/src --max-warnings 0",
+    "format": "prettier --write \"frontend/src/**/*.{ts,tsx}\" \"backend/src/**/*.ts\" \"*.json\" \"*.md\" eslint.config.mjs frontend/vite.config.mjs",
+    "format:check": "prettier --check \"frontend/src/**/*.{ts,tsx}\" \"backend/src/**/*.ts\" \"*.json\" \"*.md\" eslint.config.mjs frontend/vite.config.mjs",
+    "test:frontend": "npm --prefix frontend test",
     "test:e2e": "playwright test --project=chromium"
   },
   "repository": {
@@ -18,6 +22,14 @@
   },
   "homepage": "https://github.com/joythomasl/jobway#readme",
   "devDependencies": {
-    "@playwright/test": "^1.63.0"
+    "@eslint/js": "^9.39.5",
+    "@playwright/test": "^1.63.0",
+    "eslint": "^9.39.5",
+    "eslint-plugin-jsx-a11y": "^6.10.2",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "globals": "^17.12.0",
+    "prettier": "^3.9.9",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.70.1"
   }
 }
