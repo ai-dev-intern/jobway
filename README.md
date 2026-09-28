@@ -35,7 +35,7 @@ This project was built for the hackathon and features a fully decoupled frontend
 
 ---
 
-## 🌐 Live Demo
+## 🌐 Live Demo -> https://jobway-tau.vercel.app/prepare
 
 You don't need to run this locally to experience it! The project is fully deployed in the cloud:
 
